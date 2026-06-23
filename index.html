@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anonymous Concern Dashboard — Noosa Adventist College</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+/* ── Reset & base ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --slate:       #1E2A3A;
+  --slate-mid:   #2C3E52;
+  --slate-light: #3D5166;
+  --cream:       #F7F5F1;
+  --cream-dark:  #EDEAE4;
+  --text:        #1A1A1A;
+  --text-muted:  #6B7280;
+  --text-light:  #9CA3AF;
+
+  --new:         #3B82F6;
+  --new-bg:      #EFF6FF;
+  --new-border:  #BFDBFE;
+
+  --open:        #8B5CF6;
+  --open-bg:     #F5F3FF;
+  --open-border: #DDD6FE;
+
+  --slow:        #E8A020;
+  --slow-bg:     #FFFBEB;
+  --slow-border: #FDE68A;
+
+  --closed:      #2D8F7B;
+  --closed-bg:   #F0FDF9;
+  --closed-border:#A7F3D0;
+
+  --error:       #DC2626;
+  --radius:      8px;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+.header {
+  background: var(--slate);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-logo {
+  width: 36px;
+  height: 36px;
+  background: var(--slow);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-logo svg { width: 20px; height: 20px; }
+
+.header-title {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.header-subtitle {
+  color: #94A3B8;
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-refresh {
+  background: var(--slate-light);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.btn-refresh:hover { background: #4D6480; }
+.btn-refresh svg { width: 14px; height: 14px; }
+
+.last-updated {
+  color: #64748B;
+  font-size: 12px;
+}
+
+/* ── Status pipeline ──────────────────────────────────── */
+.pipeline {
+  background: var(--slate-mid);
+  padding: 20px 32px;
+  display: flex;
+  gap: 2px;
+}
+
+.pipeline-item {
+  flex: 1;
+  padding: 16px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  position: relative;
+}
+.pipeline-item:hover { opacity: 0.9; transform: translateY(-1px); }
+.pipeline-item.active { outline: 2px solid rgba(255,255,255,0.5); outline-offset: -2px; }
+
+.pipeline-item.p-new    { background: rgba(59,130,246,0.18); }
+.pipeline-item.p-open   { background: rgba(139,92,246,0.18); }
+.pipeline-item.p-slow   { background: rgba(232,160,32,0.18); }
+.pipeline-item.p-closed { background: rgba(45,143,123,0.18); }
+.pipeline-item.p-historical { background: rgba(148,163,184,0.18); }
+
+.pipeline-count {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.p-new .pipeline-count    { color: #93C5FD; }
+.p-open .pipeline-count   { color: #C4B5FD; }
+.p-slow .pipeline-count   { color: #FCD34D; }
+.p-closed .pipeline-count { color: #6EE7D4; }
+.p-historical .pipeline-count { color: #CBD5E1; }
+
+.pipeline-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+  color: rgba(255,255,255,0.6);
+}
+
+.pipeline-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+}
+
+/* ── Main content ─────────────────────────────────────── */
+.main {
+  padding: 24px 32px;
+  max-width: 1400px;
+}
+
+/* ── Controls bar ─────────────────────────────────────── */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+}
+.search-wrap svg {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  padding: 8px 12px 8px 34px;
+  border: 1.5px solid var(--cream-dark);
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--slate-light); }
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1.5px solid var(--cream-dark);
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.filter-select:focus { border-color: var(--slate-light); }
+
+.results-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Table ────────────────────────────────────────────── */
+.table-wrap {
+  background: #fff;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--cream-dark);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead tr {
+  background: var(--slate);
+}
+
+thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94A3B8;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+thead th:hover { color: #CBD5E1; }
+thead th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 10px; }
+thead th.sorted .sort-icon { opacity: 1; }
+
+tbody tr {
+  border-bottom: 1px solid var(--cream-dark);
+  transition: background 0.1s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: #FAFAF9; }
+
+tbody td {
+  padding: 13px 16px;
+  vertical-align: middle;
+}
+
+/* ── Status badge ─────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.badge-new    { background: var(--new-bg);    color: #1D4ED8; border: 1px solid var(--new-border); }
+.badge-new::before    { background: var(--new); }
+.badge-open   { background: var(--open-bg);   color: #6D28D9; border: 1px solid var(--open-border); }
+.badge-open::before   { background: var(--open); }
+.badge-slow   { background: var(--slow-bg);   color: #92400E; border: 1px solid var(--slow-border); }
+.badge-slow::before   { background: var(--slow); animation: pulse 1.8s infinite; }
+.badge-closed { background: var(--closed-bg); color: #065F46; border: 1px solid var(--closed-border); }
+.badge-closed::before { background: var(--closed); }
+.badge-historical { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+.badge-historical::before { background: #94A3B8; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── Deputy badge ─────────────────────────────────────── */
+.deputy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.deputy-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.deputy-primary .deputy-avatar { background: #DBEAFE; color: #1E40AF; }
+.deputy-secondary .deputy-avatar { background: #EDE9FE; color: #5B21B6; }
+.deputy-principal .deputy-avatar { background: #FEE2E2; color: #991B1B; }
+
+/* ── Age chip ─────────────────────────────────────────── */
+.age-chip {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.age-chip.overdue { color: #B45309; font-weight: 600; }
+
+/* ── School level ─────────────────────────────────────── */
+.level-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--cream-dark);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* ── Submission ID ────────────────────────────────────── */
+.sub-id {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--cream-dark);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── Empty / error states ─────────────────────────────── */
+.state-box {
+  padding: 60px 32px;
+  text-align: center;
+}
+.state-box .state-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+.state-box h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.state-box p {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 380px;
+  margin: 0 auto 16px;
+  line-height: 1.6;
+}
+
+/* ── Config panel ─────────────────────────────────────── */
+.config-panel {
+  background: #fff;
+  border: 1.5px solid var(--cream-dark);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.config-panel h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--slate);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.config-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+.config-field input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--cream-dark);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.config-field input:focus { border-color: var(--slate-light); }
+.config-actions {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-primary {
+  background: var(--slate);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--slate-mid); }
+.config-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 5px;
+  padding: 8px 12px;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* ── Loading spinner ──────────────────────────────────── */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--cream-dark);
+  border-top-color: var(--slate);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Outcome link ─────────────────────────────────────── */
+.outcome-link {
+  font-size: 12px;
+  color: var(--closed);
+  text-decoration: none;
+  font-weight: 500;
+}
+.outcome-link:hover { text-decoration: underline; }
+.outcome-pending {
+  font-size: 12px;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-left">
+    <div class="header-logo">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M10 2L3 6v4c0 4.4 3 8.5 7 9.5 4-1 7-5.1 7-9.5V6L10 2z" fill="white" opacity="0.9"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">Anonymous Concern Dashboard</div>
+      <div class="header-subtitle">Noosa Adventist College — Safeguarding</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">—</span>
+    <button class="btn-refresh" onclick="showConfig()" title="Edit Configuration">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
+      Settings
+    </button>
+    <button class="btn-refresh" onclick="loadData()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5c1.8 0 3.4.86 4.4 2.2"/>
+        <path d="M13.5 2.5v2.7h-2.7"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+</header>
+
+<!-- ── Status pipeline ── -->
+<div class="pipeline" id="pipeline">
+  <div class="pipeline-item p-new active" onclick="filterByStatus('New')" id="pipe-new">
+    <div class="pipeline-count" id="count-new">—</div>
+    <div class="pipeline-label">New</div>
+    <div class="pipeline-desc">Awaiting deputy action</div>
+  </div>
+  <div class="pipeline-item p-open" onclick="filterByStatus('Open')" id="pipe-open">
+    <div class="pipeline-count" id="count-open">—</div>
+    <div class="pipeline-label">Open</div>
+    <div class="pipeline-desc">Deputy notified, outcome pending</div>
+  </div>
+  <div class="pipeline-item p-slow" onclick="filterByStatus('Overdue')" id="pipe-slow">
+    <div class="pipeline-count" id="count-slow">—</div>
+    <div class="pipeline-label">Overdue</div>
+    <div class="pipeline-desc">Open &gt; 5 business days</div>
+  </div>
+  <div class="pipeline-item p-closed" onclick="filterByStatus('Closed')" id="pipe-closed">
+    <div class="pipeline-count" id="count-closed">—</div>
+    <div class="pipeline-label">Closed</div>
+    <div class="pipeline-desc">Outcome form completed</div>
+  </div>
+  <div class="pipeline-item p-historical" onclick="filterByStatus('Historical')" id="pipe-historical">
+    <div class="pipeline-count" id="count-historical">—</div>
+    <div class="pipeline-label">Historical</div>
+    <div class="pipeline-desc">Received before dashboard cutoff</div>
+  </div>
+  <div class="pipeline-item" style="background:rgba(255,255,255,0.05); cursor:default; flex:0.5; display:flex; align-items:center; justify-content:center;" onclick="filterByStatus('All')">
+    <div style="text-align:center">
+      <div class="pipeline-count" id="count-all" style="color:rgba(255,255,255,0.5); font-size:24px;">—</div>
+      <div class="pipeline-label" style="color:rgba(255,255,255,0.3)">All</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Config panel (shown until API key is saved) -->
+  <div class="config-panel" id="configPanel">
+    <h2>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#1E2A3A" stroke-width="2"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41"/></svg>
+      Dashboard Configuration
+    </h2>
+    <div class="config-grid">
+      <div class="config-field">
+        <label>JotForm API Key</label>
+        <input type="password" id="cfgApiKey" placeholder="Your JotForm API key" autocomplete="off">
+      </div>
+      <div class="config-field">
+        <label>Concern Form ID</label>
+        <input type="text" id="cfgFormId" placeholder="e.g. 123456789">
+      </div>
+      <div class="config-field">
+        <label>Outcome Form ID</label>
+        <input type="text" id="cfgOutcomeFormId" placeholder="e.g. 987654321">
+      </div>
+      <div class="config-field">
+        <label>Primary Deputy Name</label>
+        <input type="text" id="cfgPrimaryName" placeholder="e.g. Ms J. Smith">
+      </div>
+      <div class="config-field">
+        <label>Secondary Deputy Name</label>
+        <input type="text" id="cfgSecondaryName" placeholder="e.g. Mr T. Jones">
+      </div>
+      <div class="config-field">
+        <label>Principal Name</label>
+        <input type="text" id="cfgPrincipalName" placeholder="e.g. Mr A. Williams">
+      </div>
+      <div class="config-field">
+        <label>Outcome Form — Submission ID Field Name</label>
+        <input type="text" id="cfgLinkField" placeholder="e.g. submissionId (check your form field name)">
+      </div>
+      <div class="config-field">
+        <label>Historical Cutoff Date</label>
+        <input type="date" id="cfgCutoffDate" placeholder="Submissions on/before this date are marked Historical">
+      </div>
+    </div>
+    <div class="config-hint">
+      ⚠ Submissions received on or before the Historical Cutoff Date are tagged "Historical" and excluded from New/Open/Overdue tracking — use this to mark everything received before the dashboard went live. Leave blank to disable.
+    </div>
+    <div class="config-actions">
+      <button class="btn-primary" onclick="saveConfig()">Save &amp; Load Dashboard</button>
+      <button class="btn-refresh" style="background:transparent; color:var(--text-muted); border:1.5px solid var(--cream-dark);" onclick="cancelConfig()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controlsBar" style="display:none">
+    <div class="search-wrap">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+      <input class="search-input" type="text" id="searchInput" placeholder="Search submissions…" oninput="renderTable()">
+    </div>
+    <select class="filter-select" id="filterDeputy" onchange="renderTable()">
+      <option value="">All recipients</option>
+      <option value="primary">Primary Deputy</option>
+      <option value="secondary">Secondary Deputy</option>
+      <option value="principal">Principal</option>
+    </select>
+    <select class="filter-select" id="filterMonth" onchange="renderTable()">
+      <option value="">All months</option>
+    </select>
+    <span class="results-count" id="resultsCount"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap" id="tableWrap" style="display:none">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('id')" title="Sort by submission ID">Submission <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('date')" title="Sort by date" class="sorted">Submitted <span class="sort-icon">↓</span></th>
+          <th onclick="sortBy('level')">School Level <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('deputy')">Assigned Deputy <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('age')">Age <span class="sort-icon">↕</span></th>
+          <th onclick="sortBy('status')">Status <span class="sort-icon">↕</span></th>
+          <th>Outcome</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div id="emptyState" class="state-box" style="display:none">
+      <div class="state-icon">🔍</div>
+      <h3>No submissions match</h3>
+      <p>Try adjusting your search or filter, or select a different status from the pipeline above.</p>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loadingState" class="table-wrap state-box" style="display:none">
+    <div class="spinner"></div>
+    <h3>Loading submissions…</h3>
+    <p>Fetching data from JotForm. This usually takes a few seconds.</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="errorState" class="table-wrap state-box" style="display:none">
+    <div class="state-icon">⚠️</div>
+    <h3 id="errorTitle">Something went wrong</h3>
+    <p id="errorMsg">Check your API key and form IDs in the configuration panel above, then try refreshing.</p>
+    <button class="btn-primary" onclick="showConfig()">Edit Configuration</button>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────
+const CONFIG_KEY = 'nac_dashboard_config';
+
+let config = {};
+let allSubmissions = [];
+let outcomeMap = {};     // submissionId → outcome submission object
+let activeFilter = 'All';
+let sortKey = 'date';
+let sortDir = -1;
+
+// Safely parse a JotForm created_at value, which can be either a Unix
+// timestamp (number/numeric string) or a literal datetime string like
+// "2024-09-04 18:14:23". Falls back gracefully if neither parses cleanly.
+// JotForm's API returns created_at as a literal "YYYY-MM-DD HH:MM:SS" string with NO
+// timezone marker. Despite how it looks, this is NOT UTC — JotForm's own support confirms
+// the API always returns this in US Eastern Time (EST/EDT, America/New_York), regardless
+// of the account's configured display timezone. We must interpret it as Eastern wall-clock
+// time and convert properly (accounting for US daylight saving) to get the real UTC instant.
+function parseEasternTimeString(dateTimeStr) {
+  const [datePart, timePart] = dateTimeStr.trim().split(' ');
+  if (!datePart) return null;
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [hh, mm, ss] = (timePart || '00:00:00').split(':').map(Number);
+  if (!y || !m || !d) return null;
+
+  // Step 1: naive guess treating the string as if it were already UTC
+  const naiveUTC = new Date(Date.UTC(y, m - 1, d, hh || 0, mm || 0, ss || 0));
+  if (isNaN(naiveUTC.getTime())) return null;
+
+  // Step 2: see what that naive UTC instant displays as in America/New_York
+  const nyParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).formatToParts(naiveUTC);
+  const get = (t) => parseInt(nyParts.find(p => p.type === t).value);
+  const nyAsUTC = Date.UTC(get('year'), get('month') - 1, get('day'),
+    get('hour') === 24 ? 0 : get('hour'), get('minute'), get('second'));
+
+  // Step 3: the gap between our naive guess and what NY actually showed is the real
+  // EST/EDT offset for that date — apply it once to get the correct UTC instant.
+  const offsetMs = naiveUTC.getTime() - nyAsUTC;
+  return new Date(naiveUTC.getTime() + offsetMs);
+}
+
+function parseJotFormDate(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  // Numeric Unix timestamp (seconds) — already a true instant, no timezone ambiguity
+  if (typeof raw === 'number') return new Date(raw * 1000);
+  if (typeof raw === 'string' && /^\d+$/.test(raw.trim())) {
+    return new Date(parseInt(raw.trim(), 10) * 1000);
+  }
+  // Literal "YYYY-MM-DD HH:MM:SS" string — JotForm API's standard format, always Eastern Time
+  if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(raw.trim())) {
+    const parsed = parseEasternTimeString(raw);
+    if (parsed) return parsed;
+  }
+  // Last resort: let Date try to parse it as-is (covers any other format JotForm might send)
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) return d;
+  return null;
+}
+
+// Get {year, month, day} as they would read on a Brisbane (AEST, UTC+10, no DST) wall clock,
+// regardless of what timezone the viewing device is actually set to.
+function toBrisbaneParts(date) {
+  const parts = new Intl.DateTimeFormat('en-AU', {
+    timeZone: 'Australia/Brisbane',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(date);
+  const get = (type) => parts.find(p => p.type === type).value;
+  return { year: parseInt(get('year')), month: parseInt(get('month')), day: parseInt(get('day')) };
+}
+
+// ── BUSINESS DAYS ────────────────────────────────────────────
+function businessDaysBetween(startDate, endDate) {
+  let count = 0;
+  const cur = new Date(startDate);
+  cur.setHours(0,0,0,0);
+  const end = new Date(endDate);
+  end.setHours(0,0,0,0);
+  while (cur < end) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) count++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return count;
+}
+
+// ── DEPUTY ASSIGNMENT ─────────────────────────────────────────
+// Adjust the field name below to match your JotForm field label
+// for the "School Level" question (lowercased, no spaces → use underscores)
+const LEVEL_FIELD = 'school_level'; // ← REPLACE with your actual JotForm field name
+
+// Safely coerce any JotForm answer value (string, array, object, null) into a lowercase string
+function answerToString(val) {
+  if (val === null || val === undefined) return '';
+  if (typeof val === 'string') return val.toLowerCase();
+  if (Array.isArray(val)) return val.join(' ').toLowerCase();
+  if (typeof val === 'object') return Object.values(val).join(' ').toLowerCase();
+  return String(val).toLowerCase();
+}
+
+function assignDeputy(answers) {
+  // Try to find the school level answer across common JotForm field name variations
+  const keys = Object.keys(answers);
+  let level = '';
+  let foundLevelField = false;
+  for (const k of keys) {
+    const label = answerToString(answers[k].text);
+    const answer = answerToString(answers[k].answer);
+    if (label.includes('level') || label.includes('school') || label.includes('year') || label.includes('grade')) {
+      foundLevelField = true;
+      level = answer;
+      if (answer) break; // keep scanning other level-ish fields if this one was empty
+    }
+    // fallback: if answer contains known keywords
+    if (answer.includes('secondary') || answer.includes('kindergarten') || answer.includes('primary')) {
+      level = answer;
+      foundLevelField = true;
+      break;
+    }
+  }
+  if (level.includes('secondary')) return 'secondary';
+  if (level.includes('primary') || level.includes('kindergarten')) return 'primary';
+  // A Year Level field exists on the form but nothing was selected/typed → routed to Principal in JotForm
+  if (foundLevelField && !level) return 'principal';
+  return 'primary'; // Safe fallback if no Year Level field could be identified at all
+}
+
+function deputyLabel(type) {
+  if (type === 'secondary') return config.secondaryName || 'Secondary Deputy';
+  if (type === 'principal') return config.principalName || 'Principal';
+  return config.primaryName || 'Primary Deputy';
+}
+
+// ── STATUS LOGIC ──────────────────────────────────────────────
+function getStatus(submission, hasOutcome) {
+  const submitted = parseJotFormDate(submission.created_at);
+  if (config.cutoffDate && submitted) {
+    const cutoff = new Date(config.cutoffDate);
+    cutoff.setHours(23, 59, 59, 999); // end of cutoff day
+    if (submitted <= cutoff) return 'Historical';
+  }
+  if (hasOutcome) return 'Closed';
+  if (!submitted) return 'New'; // can't determine age, default safely
+  const now = new Date();
+  const bizDays = businessDaysBetween(submitted, now);
+  if (bizDays >= 5) return 'Overdue';
+  if (bizDays >= 1) return 'Open';
+  return 'New';
+}
+
+// ── CONFIG MANAGEMENT ─────────────────────────────────────────
+function loadConfig() {
+  try {
+    const saved = localStorage.getItem(CONFIG_KEY);
+    if (saved) {
+      config = JSON.parse(saved);
+      return !!(config.apiKey && config.formId && config.outcomeFormId);
+    }
+  } catch(e) {}
+  return false;
+}
+
+function saveConfig() {
+  config = {
+    apiKey:        document.getElementById('cfgApiKey').value.trim(),
+    formId:        document.getElementById('cfgFormId').value.trim(),
+    outcomeFormId: document.getElementById('cfgOutcomeFormId').value.trim(),
+    primaryName:   document.getElementById('cfgPrimaryName').value.trim() || 'Primary Deputy',
+    secondaryName: document.getElementById('cfgSecondaryName').value.trim() || 'Secondary Deputy',
+    principalName: document.getElementById('cfgPrincipalName').value.trim() || 'Principal',
+    linkField:     document.getElementById('cfgLinkField').value.trim() || 'submissionId',
+    cutoffDate:    document.getElementById('cfgCutoffDate').value || '',
+  };
+  if (!config.apiKey || !config.formId || !config.outcomeFormId) {
+    alert('Please fill in at least the API key, Concern Form ID, and Outcome Form ID.');
+    return;
+  }
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  document.getElementById('configPanel').style.display = 'none';
+  loadData();
+}
+
+function showConfig() {
+  document.getElementById('configPanel').style.display = 'block';
+  if (config.apiKey) document.getElementById('cfgApiKey').value = config.apiKey;
+  if (config.formId) document.getElementById('cfgFormId').value = config.formId;
+  if (config.outcomeFormId) document.getElementById('cfgOutcomeFormId').value = config.outcomeFormId;
+  if (config.primaryName) document.getElementById('cfgPrimaryName').value = config.primaryName;
+  if (config.secondaryName) document.getElementById('cfgSecondaryName').value = config.secondaryName;
+  if (config.principalName) document.getElementById('cfgPrincipalName').value = config.principalName;
+  if (config.linkField) document.getElementById('cfgLinkField').value = config.linkField;
+  if (config.cutoffDate) document.getElementById('cfgCutoffDate').value = config.cutoffDate;
+  document.getElementById('configPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelConfig() {
+  // Only allow cancelling back to the dashboard if a valid config already exists
+  if (config.apiKey && config.formId && config.outcomeFormId) {
+    document.getElementById('configPanel').style.display = 'none';
+  }
+}
+
+// ── JOTFORM API ───────────────────────────────────────────────
+async function fetchSubmissions(formId, limit = 1000) {
+  const url = `https://api.jotform.com/form/${formId}/submissions?apiKey=${config.apiKey}&limit=${limit}&orderby=created_at,DESC`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`JotForm API error: ${res.status} ${res.statusText}`);
+  const data = await res.json();
+  if (data.responseCode !== 200) throw new Error(data.message || 'JotForm API returned an error');
+  return data.content || [];
+}
+
+// ── LOAD DATA ─────────────────────────────────────────────────
+async function loadData() {
+  if (!config.apiKey) return;
+
+  // Show loading
+  document.getElementById('loadingState').style.display = 'block';
+  document.getElementById('tableWrap').style.display = 'none';
+  document.getElementById('errorState').style.display = 'none';
+  document.getElementById('controlsBar').style.display = 'none';
+
+  try {
+    const [concerns, outcomes] = await Promise.all([
+      fetchSubmissions(config.formId),
+      fetchSubmissions(config.outcomeFormId),
+    ]);
+
+    // Build outcome map: link field value (original submission ID) → outcome submission
+    outcomeMap = {};
+    for (const o of outcomes) {
+      const answers = o.answers || {};
+      for (const k of Object.keys(answers)) {
+        const fieldName = answerToString(answers[k].name);
+        const linkField = (config.linkField || 'submissionid').toLowerCase();
+        if (fieldName.includes(linkField) || fieldName.includes('submission') || fieldName.includes('concern_id')) {
+          const rawVal = answers[k].answer;
+          const val = typeof rawVal === 'string' ? rawVal.trim() : answerToString(rawVal).trim();
+          if (val) {
+            outcomeMap[val] = o;
+            break;
+          }
+        }
+      }
+    }
+
+    allSubmissions = concerns;
+
+    // Populate month filter
+    populateMonthFilter(concerns);
+
+    // Update pipeline counts
+    updateCounts(concerns);
+
+    // Render
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('tableWrap').style.display = 'block';
+    document.getElementById('controlsBar').style.display = 'flex';
+
+    document.getElementById('lastUpdated').textContent =
+      'Updated ' + new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', timeZone: 'Australia/Brisbane' });
+
+    renderTable();
+
+  } catch(e) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorTitle').textContent = 'Could not load submissions';
+    document.getElementById('errorMsg').textContent = e.message +
+      ' — Check your API key and form IDs, then try again.';
+    console.error(e);
+  }
+}
+
+// ── MONTH FILTER ──────────────────────────────────────────────
+function populateMonthFilter(submissions) {
+  const months = new Set();
+  for (const s of submissions) {
+    const d = parseJotFormDate(s.created_at);
+    if (!d) continue;
+    const { year, month } = toBrisbaneParts(d);
+    months.add(`${year}-${String(month).padStart(2,'0')}`);
+  }
+  const sel = document.getElementById('filterMonth');
+  sel.innerHTML = '<option value="">All months</option>';
+  Array.from(months).sort().reverse().forEach(m => {
+    const [y, mo] = m.split('-');
+    const label = new Date(y, mo-1).toLocaleString('en-AU', { month: 'long', year: 'numeric' });
+    sel.innerHTML += `<option value="${m}">${label}</option>`;
+  });
+}
+
+// ── PIPELINE COUNTS ───────────────────────────────────────────
+function updateCounts(submissions) {
+  let newC = 0, openC = 0, slowC = 0, closedC = 0, historicalC = 0;
+  for (const s of submissions) {
+    const hasOutcome = !!outcomeMap[s.id];
+    const status = getStatus(s, hasOutcome);
+    if (status === 'New') newC++;
+    else if (status === 'Open') openC++;
+    else if (status === 'Overdue') slowC++;
+    else if (status === 'Closed') closedC++;
+    else if (status === 'Historical') historicalC++;
+  }
+  document.getElementById('count-new').textContent = newC;
+  document.getElementById('count-open').textContent = openC;
+  document.getElementById('count-slow').textContent = slowC;
+  document.getElementById('count-closed').textContent = closedC;
+  document.getElementById('count-historical').textContent = historicalC;
+  document.getElementById('count-all').textContent = submissions.length;
+}
+
+// ── FILTER BY STATUS (pipeline click) ────────────────────────
+function filterByStatus(status) {
+  activeFilter = status;
+  // Update pipeline active states
+  ['new','open','slow','closed','historical'].forEach(k => {
+    document.getElementById('pipe-'+k).classList.remove('active');
+  });
+  const map = { 'New':'new','Open':'open','Overdue':'slow','Closed':'closed','Historical':'historical' };
+  if (map[status]) document.getElementById('pipe-'+map[status]).classList.add('active');
+  renderTable();
+}
+
+// ── SORT ──────────────────────────────────────────────────────
+function sortBy(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = -1; }
+  // Update header indicators
+  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
+  renderTable();
+}
+
+// ── RENDER TABLE ──────────────────────────────────────────────
+function renderTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const deputyFilter = document.getElementById('filterDeputy').value;
+  const monthFilter = document.getElementById('filterMonth').value;
+
+  let rows = allSubmissions.map(s => {
+    const hasOutcome = !!outcomeMap[s.id];
+    const status = getStatus(s, hasOutcome);
+    const deputy = status === 'Historical' ? '' : assignDeputy(s.answers || {});
+    const date = parseJotFormDate(s.created_at);
+    const bizDays = date ? businessDaysBetween(date, new Date()) : 0;
+    return { s, status, deputy, date, bizDays, hasOutcome };
+  });
+
+  // Filter by pipeline status
+  if (activeFilter !== 'All') {
+    rows = rows.filter(r => r.status === activeFilter);
+  }
+
+  // Filter by deputy
+  if (deputyFilter) {
+    rows = rows.filter(r => r.deputy === deputyFilter);
+  }
+
+  // Filter by month
+  if (monthFilter) {
+    rows = rows.filter(r => {
+      const d = r.date;
+      if (!d) return false;
+      const { year, month } = toBrisbaneParts(d);
+      return `${year}-${String(month).padStart(2,'0')}` === monthFilter;
+    });
+  }
+
+  // Filter by search (searches submission ID and level answer)
+  if (search) {
+    rows = rows.filter(r => {
+      const text = JSON.stringify(r.s.answers).toLowerCase() + r.s.id;
+      return text.includes(search);
+    });
+  }
+
+  // Sort
+  rows.sort((a, b) => {
+    let av, bv;
+    switch (sortKey) {
+      case 'date':   av = a.date || new Date(0); bv = b.date || new Date(0); break;
+      case 'age':    av = a.bizDays; bv = b.bizDays; break;
+      case 'status': av = a.status; bv = b.status; break;
+      case 'deputy': av = a.deputy; bv = b.deputy; break;
+      case 'id':     av = a.s.id; bv = b.s.id; break;
+      default:       av = a.date; bv = b.date;
+    }
+    if (av < bv) return -sortDir;
+    if (av > bv) return sortDir;
+    return 0;
+  });
+
+  document.getElementById('resultsCount').textContent =
+    rows.length === allSubmissions.length
+      ? `${rows.length} submission${rows.length !== 1 ? 's' : ''}`
+      : `${rows.length} of ${allSubmissions.length} submissions`;
+
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  // Get school level display from answers
+  function getLevelDisplay(answers) {
+    for (const k of Object.keys(answers)) {
+      const label = answerToString(answers[k].text);
+      const answer = answers[k].answer;
+      const answerStr = answerToString(answer);
+      if (label.includes('level') || label.includes('school') || label.includes('year') || label.includes('grade') || answerStr.match(/kindergarten|primary|secondary/)) {
+        if (answer) {
+          // Return a displayable string even if the raw answer is an array/object
+          if (typeof answer === 'string') return answer;
+          if (Array.isArray(answer)) return answer.join(', ');
+          if (typeof answer === 'object') return Object.values(answer).join(', ');
+          return String(answer);
+        }
+      }
+    }
+    return '—';
+  }
+
+  tbody.innerHTML = rows.map(({ s, status, deputy, date, bizDays, hasOutcome }) => {
+    const statusClass = {
+      'New': 'badge-new',
+      'Open': 'badge-open',
+      'Overdue': 'badge-slow',
+      'Closed': 'badge-closed',
+      'Historical': 'badge-historical',
+    }[status] || 'badge-new';
+
+    const isHistorical = status === 'Historical';
+    const deputyClass = deputy === 'secondary' ? 'deputy-secondary' : deputy === 'principal' ? 'deputy-principal' : 'deputy-primary';
+    const initials = deputy ? deputyLabel(deputy).replace(/^(Mr|Ms|Mrs|Dr)\.?\s*/i, '').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2) : '';
+    const level = getLevelDisplay(s.answers || {});
+    const ageLabel = !date ? '—' : (bizDays === 0 ? 'Today' : bizDays === 1 ? '1 business day' : `${bizDays} business days`);
+    const ageClass = bizDays >= 5 && status !== 'Closed' && status !== 'Historical' ? 'overdue' : '';
+
+    const outcomeHtml = isHistorical
+      ? `<span style="font-size:12px; color:var(--text-light); font-style:italic;">Historical</span>`
+      : hasOutcome
+        ? `<span style="font-size:12px; color:var(--closed); font-weight:500;">✓ Completed</span>`
+        : `<span class="outcome-pending">Awaiting outcome</span>`;
+
+    const dateCell = date
+      ? `${date.toLocaleDateString('en-AU', { day:'2-digit', month:'short', year:'numeric', timeZone:'Australia/Brisbane' })}<br><span style="font-size:11px;color:var(--text-muted)">${date.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', timeZone:'Australia/Brisbane' })}</span>`
+      : `<span style="color:var(--text-light)">Unknown date</span>`;
+
+    const deputyCell = deputy
+      ? `<div class="deputy-badge ${deputyClass}">
+          <div class="deputy-avatar">${initials}</div>
+          <span>${deputyLabel(deputy)}</span>
+        </div>`
+      : `<span style="font-size:12px; color:var(--text-light);">—</span>`;
+
+    return `<tr>
+      <td><span class="sub-id">${s.id}</span></td>
+      <td style="white-space:nowrap; font-size:13px;">${dateCell}</td>
+      <td><span class="level-tag">${level}</span></td>
+      <td>${deputyCell}</td>
+      <td><span class="age-chip ${ageClass}">${ageLabel}</span></td>
+      <td><span class="badge ${statusClass}">${status}</span></td>
+      <td>${outcomeHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+(function init() {
+  const hasConfig = loadConfig();
+  if (hasConfig) {
+    document.getElementById('configPanel').style.display = 'none';
+    loadData();
+  } else {
+    showConfig();
+  }
+})();
+
+// Auto-refresh every 5 minutes
+setInterval(loadData, 5 * 60 * 1000);
+</script>
+</body>
+</html>
