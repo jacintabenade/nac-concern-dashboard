@@ -817,11 +817,17 @@ function assignDeputy(answers) {
   for (const k of keys) {
     const label = answerToString(answers[k].text);
     const answer = answerToString(answers[k].answer);
-    // Only match on the field's LABEL, never on the answer's own text — a
-    // concern description can legitimately mention "primary" or "secondary"
-    // in a sentence without being the actual Year Level field, and routing
-    // a real case to the wrong deputy based on that would be a serious error.
-    if (label.includes('level') || label.includes('school') || label.includes('year') || label.includes('grade')) {
+    // Match only on specific, precise phrases that genuinely identify a Year
+    // Level question. Loose single-word checks like "school" or "year" are
+    // too easily satisfied by ordinary sentences inside the long concern-
+    // description labels (e.g. "...happenings in the school that...") and
+    // would misroute a real case to the wrong deputy based on that text.
+    const isLevelField =
+      label.includes('year level') ||
+      label.includes('which year') ||
+      label.includes('select your year') ||
+      (label.includes('level') && !label.includes('concern'));
+    if (isLevelField) {
       foundLevelField = true;
       level = answer;
       if (answer) break; // keep scanning other level-ish fields if this one was empty
@@ -1190,11 +1196,18 @@ function renderTable() {
     for (const k of Object.keys(answers)) {
       const label = answerToString(answers[k].text);
       const answer = answers[k].answer;
-      // Only match on the field's LABEL containing level/school/year/grade —
-      // never on the answer's own text, since long concern descriptions can
-      // legitimately contain words like "primary" or "secondary" in a sentence
-      // and would otherwise be wrongly picked up as the Year Level field.
-      if (label.includes('level') || label.includes('school') || label.includes('year') || label.includes('grade')) {
+      // Match only on specific, precise phrases that genuinely identify a Year
+      // Level question on this form. Loose single-word checks like "school" or
+      // "year" are too easily satisfied by ordinary sentences inside the long
+      // concern-description labels (e.g. "...happenings in the school that...",
+      // "...for the wellbeing of yourself and other students...") and would
+      // wrongly pick up the concern field instead of the real Year Level field.
+      const isLevelField =
+        label.includes('year level') ||
+        label.includes('which year') ||
+        label.includes('select your year') ||
+        (label.includes('level') && !label.includes('concern')) ;
+      if (isLevelField) {
         if (answer) {
           // Return a displayable string even if the raw answer is an array/object
           if (typeof answer === 'string') return answer;
