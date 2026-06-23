@@ -817,16 +817,14 @@ function assignDeputy(answers) {
   for (const k of keys) {
     const label = answerToString(answers[k].text);
     const answer = answerToString(answers[k].answer);
+    // Only match on the field's LABEL, never on the answer's own text — a
+    // concern description can legitimately mention "primary" or "secondary"
+    // in a sentence without being the actual Year Level field, and routing
+    // a real case to the wrong deputy based on that would be a serious error.
     if (label.includes('level') || label.includes('school') || label.includes('year') || label.includes('grade')) {
       foundLevelField = true;
       level = answer;
       if (answer) break; // keep scanning other level-ish fields if this one was empty
-    }
-    // fallback: if answer contains known keywords
-    if (answer.includes('secondary') || answer.includes('kindergarten') || answer.includes('primary')) {
-      level = answer;
-      foundLevelField = true;
-      break;
     }
   }
   if (level.includes('secondary')) return 'secondary';
@@ -1192,8 +1190,11 @@ function renderTable() {
     for (const k of Object.keys(answers)) {
       const label = answerToString(answers[k].text);
       const answer = answers[k].answer;
-      const answerStr = answerToString(answer);
-      if (label.includes('level') || label.includes('school') || label.includes('year') || label.includes('grade') || answerStr.match(/kindergarten|primary|secondary/)) {
+      // Only match on the field's LABEL containing level/school/year/grade —
+      // never on the answer's own text, since long concern descriptions can
+      // legitimately contain words like "primary" or "secondary" in a sentence
+      // and would otherwise be wrongly picked up as the Year Level field.
+      if (label.includes('level') || label.includes('school') || label.includes('year') || label.includes('grade')) {
         if (answer) {
           // Return a displayable string even if the raw answer is an array/object
           if (typeof answer === 'string') return answer;
