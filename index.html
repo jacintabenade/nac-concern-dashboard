@@ -962,7 +962,12 @@ async function loadData() {
       for (const k of Object.keys(answers)) {
         const fieldName = answerToString(answers[k].name);
         const linkField = (config.linkField || 'submissionid').toLowerCase();
-        if (fieldName.includes(linkField) || fieldName.includes('submission') || fieldName.includes('concern_id')) {
+        // Match ONLY on the exact configured link field name — no loose
+        // substring fallbacks. A broad check like fieldName.includes('submission')
+        // would also match unrelated fields such as "anonymousSubmission" (the
+        // outcome summary text field), which sits earlier in the answers object
+        // and would incorrectly be used as the link ID instead of the real one.
+        if (fieldName === linkField) {
           const rawVal = answers[k].answer;
           const val = typeof rawVal === 'string' ? rawVal.trim() : answerToString(rawVal).trim();
           if (val) {
