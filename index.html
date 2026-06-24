@@ -345,90 +345,6 @@ tbody td {
 .deputy-principal .deputy-avatar { background: #FEE2E2; color: #991B1B; }
 .deputy-counsellor .deputy-avatar { background: #FEF3C7; color: #92400E; }
 
-/* ── Reassignment control ─────────────────────────────── */
-.deputy-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.reassign-link {
-  font-size: 10.5px;
-  color: var(--text-light);
-  cursor: pointer;
-  text-decoration: underline;
-  width: fit-content;
-}
-.reassign-link:hover { color: var(--closed); }
-.reassign-override-tag {
-  font-size: 9.5px;
-  color: #92400E;
-  background: #FEF3C7;
-  border-radius: 3px;
-  padding: 1px 5px;
-  width: fit-content;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-/* ── Reassign modal ───────────────────────────────────── */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-box {
-  background: #fff;
-  border-radius: 10px;
-  padding: 24px;
-  width: 380px;
-  max-width: 90vw;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
-}
-.modal-box h3 {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--slate);
-  margin-bottom: 14px;
-}
-.modal-box label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  margin-bottom: 5px;
-  margin-top: 12px;
-}
-.modal-box select, .modal-box input {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1.5px solid var(--cream-dark);
-  border-radius: 6px;
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-}
-.modal-actions {
-  margin-top: 18px;
-  display: flex;
-  gap: 8px;
-}
-.modal-history {
-  margin-top: 14px;
-  max-height: 100px;
-  overflow-y: auto;
-  font-size: 11px;
-  color: var(--text-muted);
-  border-top: 1px solid var(--cream-dark);
-  padding-top: 10px;
-}
-.modal-history-entry { margin-bottom: 4px; }
-
 /* ── Age chip ─────────────────────────────────────────── */
 .age-chip {
   font-size: 12px;
@@ -803,7 +719,6 @@ const CONFIG_KEY = 'nac_dashboard_config';
 let config = {};
 let allSubmissions = [];
 let outcomeMap = {};     // submissionId → outcome submission object
-let assignmentOverrides = {}; // submissionId → { type, history: [{by, date, from, to}] }
 let activeFilter = 'All';
 let sortKey = 'date';
 let sortDir = -1;
@@ -901,34 +816,39 @@ function answerToString(val) {
 }
 
 function assignDeputy(answers) {
-  // Try to find the school level answer across common JotForm field name variations
-  const keys = Object.keys(answers);
-  let level = '';
-  let foundLevelField = false;
-  for (const k of keys) {
-    const label = answerToString(answers[k].text);
-    const answer = answerToString(answers[k].answer);
-    // Match only on specific, precise phrases that genuinely identify a Year
-    // Level question. Loose single-word checks like "school" or "year" are
-    // too easily satisfied by ordinary sentences inside the long concern-
-    // description labels (e.g. "...happenings in the school that...") and
-    // would misroute a real case to the wrong deputy based on that text.
-    const isLevelField =
-      label.includes('year level') ||
-      label.includes('which year') ||
-      label.includes('select your year') ||
-      (label.includes('level') && !label.includes('concern'));
-    if (isLevelField) {
-      foundLevelField = true;
-      level = answer;
-      if (answer) break; // keep scanning other level-ish fields if this one was empty
+  // The Concern Form now calculates and writes the correct assignee directly
+  // into a dedicated 'assignee' field (JotForm's own conditional logic does
+  // the Year Level → person routing). The dashboard just needs to read that
+  // value and match it against the names configured in Settings — far more
+  // reliable than re-deriving the routing decision from Year Level text.
+  let assigneeName = '';
+  for (const k of Object.keys(answers)) {
+    const name = answerToString(answers[k].name);
+    if (name === 'assignee') {
+      const val = answers[k].answer;
+      assigneeName = (typeof val === 'string' ? val : answerToString(val)).trim();
+      break;
     }
   }
-  if (level.includes('secondary')) return 'secondary';
-  if (level.includes('primary') || level.includes('kindergarten')) return 'primary';
-  // A Year Level field exists on the form but nothing was selected/typed → routed to Principal in JotForm
-  if (foundLevelField && !level) return 'principal';
-  return 'primary'; // Safe fallback if no Year Level field could be identified at all
+
+  if (!assigneeName) return 'principal'; // No assignee given → treat as Principal, matching prior behaviour for blank routing
+
+  const normalisedAssignee = assigneeName.toLowerCase();
+  const primary = (config.primaryName || '').toLowerCase().trim();
+  const secondary = (config.secondaryName || '').toLowerCase().trim();
+  const principal = (config.principalName || '').toLowerCase().trim();
+  const counsellor = (config.counsellorName || '').toLowerCase().trim();
+
+  if (secondary && normalisedAssignee === secondary) return 'secondary';
+  if (principal && normalisedAssignee === principal) return 'principal';
+  if (counsellor && normalisedAssignee === counsellor) return 'counsellor';
+  if (primary && normalisedAssignee === primary) return 'primary';
+
+  // Assignee field had a value, but it didn't match any configured name exactly —
+  // most likely a typo or a name not yet added in Settings. Default to Principal
+  // so an unrecognised case is still visibly routed somewhere rather than silently
+  // mismatched to the wrong person.
+  return 'principal';
 }
 
 function deputyLabel(type) {
@@ -1055,10 +975,6 @@ async function loadData() {
 
     allSubmissions = concerns;
 
-    // Load any manual reassignment overrides from shared storage, so every
-    // visitor sees the same overrides regardless of who set them or on which device
-    await loadAssignmentOverrides(concerns);
-
     // Populate month filter
     populateMonthFilter(concerns);
 
@@ -1123,111 +1039,6 @@ function updateCounts(submissions) {
   document.getElementById('count-all').textContent = submissions.length;
 }
 
-// ── ASSIGNMENT OVERRIDES (shared, persistent storage) ────────
-async function loadAssignmentOverrides(submissions) {
-  assignmentOverrides = {};
-  try {
-    const listResult = await window.storage.list('assign-override:', true);
-    if (!listResult || !listResult.keys || listResult.keys.length === 0) return;
-    for (const key of listResult.keys) {
-      try {
-        const result = await window.storage.get(key, true);
-        if (result && result.value) {
-          const submissionId = key.replace('assign-override:', '');
-          assignmentOverrides[submissionId] = JSON.parse(result.value);
-        }
-      } catch (e) {
-        // Individual key fetch failed — skip it, don't break the whole load
-        console.warn('Could not load override for', key, e);
-      }
-    }
-  } catch (e) {
-    // Storage might be briefly unavailable — fail gracefully, defaults still apply
-    console.warn('Could not load assignment overrides', e);
-  }
-}
-
-async function saveAssignmentOverride(submissionId, newType, changedBy, previousType) {
-  const existing = assignmentOverrides[submissionId] || { history: [] };
-  const entry = {
-    type: newType,
-    history: [
-      ...existing.history,
-      {
-        from: previousType || '(auto)',
-        to: newType,
-        by: changedBy || '(name not given)',
-        date: new Date().toISOString(),
-      }
-    ]
-  };
-  await window.storage.set('assign-override:' + submissionId, JSON.stringify(entry), true);
-  assignmentOverrides[submissionId] = entry;
-}
-
-// ── REASSIGN MODAL ────────────────────────────────────────────
-let reassignTargetId = null;
-
-function openReassignModal(submissionId, currentType) {
-  reassignTargetId = submissionId;
-  const existing = assignmentOverrides[submissionId];
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.id = 'reassignOverlay';
-
-  const historyHtml = (existing && existing.history && existing.history.length)
-    ? existing.history.slice().reverse().map(h => {
-        const d = new Date(h.date);
-        const dateStr = d.toLocaleDateString('en-AU', { day:'2-digit', month:'short', year:'numeric', timeZone:'Australia/Brisbane' });
-        return `<div class="modal-history-entry">${dateStr} — reassigned to <b>${deputyLabel(h.to)}</b> by ${h.by}</div>`;
-      }).join('')
-    : '<div class="modal-history-entry">No previous reassignments</div>';
-
-  overlay.innerHTML = `
-    <div class="modal-box">
-      <h3>Reassign Case</h3>
-      <label>Assign to</label>
-      <select id="reassignSelect">
-        <option value="primary" ${currentType === 'primary' ? 'selected' : ''}>${deputyLabel('primary')}</option>
-        <option value="secondary" ${currentType === 'secondary' ? 'selected' : ''}>${deputyLabel('secondary')}</option>
-        <option value="principal" ${currentType === 'principal' ? 'selected' : ''}>${deputyLabel('principal')}</option>
-        <option value="counsellor" ${currentType === 'counsellor' ? 'selected' : ''}>${deputyLabel('counsellor')}</option>
-      </select>
-      <label>Your name (for the record)</label>
-      <input type="text" id="reassignByName" placeholder="e.g. Mrs Jodi Presecan">
-      <div class="modal-actions">
-        <button class="btn-primary" onclick="confirmReassign()">Save Reassignment</button>
-        <button class="btn-refresh" style="background:transparent; color:var(--text-muted); border:1.5px solid var(--cream-dark);" onclick="closeReassignModal()">Cancel</button>
-      </div>
-      <div class="modal-history">${historyHtml}</div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-}
-
-function closeReassignModal() {
-  const overlay = document.getElementById('reassignOverlay');
-  if (overlay) overlay.remove();
-  reassignTargetId = null;
-}
-
-async function confirmReassign() {
-  const newType = document.getElementById('reassignSelect').value;
-  const byName = document.getElementById('reassignByName').value.trim();
-  if (!byName) {
-    alert('Please enter your name so this change can be recorded.');
-    return;
-  }
-  const submission = allSubmissions.find(s => s.id === reassignTargetId);
-  const previousType = assignmentOverrides[reassignTargetId]
-    ? assignmentOverrides[reassignTargetId].type
-    : assignDeputy(submission ? (submission.answers || {}) : {});
-
-  await saveAssignmentOverride(reassignTargetId, newType, byName, previousType);
-  closeReassignModal();
-  renderTable();
-}
-
 // ── FILTER BY STATUS (pipeline click) ────────────────────────
 // ── EXPAND/COLLAPSE TEXT CELLS ────────────────────────────────
 function toggleExpand(id) {
@@ -1269,13 +1080,10 @@ function renderTable() {
   let rows = allSubmissions.map(s => {
     const hasOutcome = !!outcomeMap[s.id];
     const status = getStatus(s, hasOutcome);
-    const computedDeputy = status === 'Historical' ? '' : assignDeputy(s.answers || {});
-    const override = assignmentOverrides[s.id];
-    const deputy = (override && override.type) ? override.type : computedDeputy;
-    const isOverridden = !!(override && override.type && override.type !== computedDeputy);
+    const deputy = status === 'Historical' ? '' : assignDeputy(s.answers || {});
     const date = parseJotFormDate(s.created_at);
     const bizDays = date ? businessDaysBetween(date, new Date()) : 0;
-    return { s, status, deputy, isOverridden, date, bizDays, hasOutcome };
+    return { s, status, deputy, date, bizDays, hasOutcome };
   });
 
   // Filter by pipeline status
@@ -1426,7 +1234,7 @@ function renderTable() {
     return '—';
   }
 
-  tbody.innerHTML = rows.map(({ s, status, deputy, isOverridden, date, bizDays, hasOutcome }) => {
+  tbody.innerHTML = rows.map(({ s, status, deputy, date, bizDays, hasOutcome }) => {
     const statusClass = {
       'New': 'badge-new',
       'Open': 'badge-open',
@@ -1458,15 +1266,11 @@ function renderTable() {
       ? `${date.toLocaleDateString('en-AU', { day:'2-digit', month:'short', year:'numeric', timeZone:'Australia/Brisbane' })}<br><span style="font-size:11px;color:var(--text-muted)">${date.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', timeZone:'Australia/Brisbane' })}</span>`
       : `<span style="color:var(--text-light)">Unknown date</span>`;
 
-    const deputyCell = isHistorical
+    const deputyCell = (isHistorical || !deputy)
       ? `<span style="font-size:12px; color:var(--text-light);">—</span>`
-      : `<div class="deputy-cell">
-          ${deputy ? `<div class="deputy-badge ${deputyClass}">
-            <div class="deputy-avatar">${initials}</div>
-            <span>${deputyLabel(deputy)}</span>
-          </div>` : `<span style="font-size:12px; color:var(--text-light);">—</span>`}
-          ${isOverridden ? `<span class="reassign-override-tag">Manually reassigned</span>` : ''}
-          <span class="reassign-link" onclick="openReassignModal('${s.id}', '${deputy || 'primary'}')">Reassign</span>
+      : `<div class="deputy-badge ${deputyClass}">
+          <div class="deputy-avatar">${initials}</div>
+          <span>${deputyLabel(deputy)}</span>
         </div>`;
 
     return `<tr>
